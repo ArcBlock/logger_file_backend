@@ -3,7 +3,7 @@ defmodule LoggerFileBackendWithFormatters do
   """
 
   defmodule State do
-    defstruct ~w(format inode io_device level metadata metadata_filter name path rotate)a
+    defstruct ~w(format formatter inode io_device level metadata metadata_filter name path rotate)a
   end
 
   @behaviour :gen_event
@@ -129,8 +129,8 @@ defmodule LoggerFileBackendWithFormatters do
     end
   end
 
-  defp format_event(level, msg, ts, md, %{format: format, metadata: keys}) do
-    Logger.Formatter.format(format, level, msg, ts, take_metadata(md, keys))
+  defp format_event(level, msg, ts, md, state) do
+    state.formatter.format_event(level, msg, ts, md, state)
   end
 
   @doc false
@@ -150,9 +150,9 @@ defmodule LoggerFileBackendWithFormatters do
     end
   end
 
-  defp take_metadata(metadata, :all), do: metadata
+  def take_metadata(metadata, :all), do: metadata
 
-  defp take_metadata(metadata, keys) do
+  def take_metadata(metadata, keys) do
     metadatas =
       Enum.reduce(keys, [], fn key, acc ->
         case Keyword.fetch(metadata, key) do
@@ -180,6 +180,7 @@ defmodule LoggerFileBackendWithFormatters do
     metadata = Keyword.get(opts, :metadata, [])
     format_opts = Keyword.get(opts, :format, @default_format)
     format = Logger.Formatter.compile(format_opts)
+    formatter = Keyword.get(opts, :formatter, LoggerFileBackendWithFormatters.Formatters.Default)
     path = Keyword.get(opts, :path)
     metadata_filter = Keyword.get(opts, :metadata_filter)
     rotate = Keyword.get(opts, :rotate)
@@ -189,6 +190,7 @@ defmodule LoggerFileBackendWithFormatters do
       | name: name,
         path: path,
         format: format,
+        formatter: formatter,
         level: level,
         metadata: metadata,
         metadata_filter: metadata_filter,
