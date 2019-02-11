@@ -3,17 +3,24 @@ defmodule LoggerFileBackendWithFormattersTest do
   require Logger
 
   @backend {LoggerFileBackendWithFormatters, :test}
+  @basedir "test/logs"
 
   import LoggerFileBackendWithFormatters, only: [prune: 1, metadata_matches?: 2]
 
-  # add the backend here instead of `config/test.exs` due to issue 2649
-  Logger.add_backend(@backend)
+  setup_all do
+    on_exit(fn ->
+      File.rm_rf!(@basedir)
+    end)
+  end
 
-  setup do
-    config(path: "test/logs/test.log", level: :debug)
+  setup context do
+    # We add and remove the backend here to avoid cross-test effects
+    Logger.add_backend(@backend, flush: true)
+
+    config(path: logfile(context, @basedir), level: :debug)
 
     on_exit(fn ->
-      path() && File.rm_rf!(Path.dirname(path()))
+      :ok = Logger.remove_backend(@backend)
     end)
   end
 
@@ -195,8 +202,11 @@ defmodule LoggerFileBackendWithFormattersTest do
 
     config(metadata: :all)
     Logger.debug("metadata", metadata5: "foo", metadata6: "bar")
-    assert Regex.match?(~r/ metadata5\=foo /, log())
-    assert Regex.match?(~r/ metadata6\=bar /, log())
+
+    # Match separately for metadata5/metadata6 to avoid depending on order
+    contents = log()
+    assert contents =~ "metadata5=foo"
+    assert contents =~ "metadata6=bar"
   end
 
   defp has_open(path) do
@@ -227,6 +237,15 @@ defmodule LoggerFileBackendWithFormattersTest do
   end
 
   defp config(opts) do
-    Logger.configure_backend(@backend, opts)
+    :ok = Logger.configure_backend(@backend, opts)
+  end
+
+  defp logfile(context, basedir) do
+    logfile =
+      context.test
+      |> Atom.to_string()
+      |> String.replace(" ", "_")
+
+    Path.join(basedir, logfile)
   end
 end
