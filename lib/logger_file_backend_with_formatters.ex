@@ -2,6 +2,10 @@ defmodule LoggerFileBackendWithFormatters do
   @moduledoc """
   """
 
+  defmodule State do
+    defstruct ~w(format inode io_device level metadata metadata_filter name path rotate)a
+  end
+
   @behaviour :gen_event
 
   @type path :: String.t()
@@ -17,20 +21,17 @@ defmodule LoggerFileBackendWithFormatters do
     {:ok, configure(name, [])}
   end
 
-  def handle_call({:configure, opts}, %{name: name} = state) do
-    {:ok, :ok, configure(name, opts, state)}
+  def handle_call({:configure, opts}, state) do
+    {:ok, :ok, configure(state.name, opts, state)}
   end
 
-  def handle_call(:path, %{path: path} = state) do
-    {:ok, {:ok, path}, state}
+  def handle_call(:path, state) do
+    {:ok, {:ok, state.path}, state}
   end
 
-  def handle_event(
-        {level, _gl, {Logger, msg, ts, md}},
-        %{level: min_level, metadata_filter: metadata_filter} = state
-      ) do
-    if (is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt) and
-         metadata_matches?(md, metadata_filter) do
+  def handle_event({level, _gl, {Logger, msg, ts, md}}, state) do
+    if (is_nil(state.level) or Logger.compare_levels(level, state.level) != :lt) and
+         metadata_matches?(md, state.metadata_filter) do
       log_event(level, msg, ts, md, state)
     else
       {:ok, state}
@@ -48,15 +49,15 @@ defmodule LoggerFileBackendWithFormatters do
 
   # helpers
 
-  defp log_event(_level, _msg, _ts, _md, %{path: nil} = state) do
+  defp log_event(_level, _msg, _ts, _md, %State{path: nil} = state) do
     {:ok, state}
   end
 
-  defp log_event(level, msg, ts, md, %{path: path, io_device: nil} = state)
+  defp log_event(level, msg, ts, md, %State{path: path, io_device: nil} = state)
        when is_binary(path) do
     case open_log(path) do
       {:ok, io_device, inode} ->
-        log_event(level, msg, ts, md, %{state | io_device: io_device, inode: inode})
+        log_event(level, msg, ts, md, %State{state | io_device: io_device, inode: inode})
 
       _other ->
         {:ok, state}
@@ -68,10 +69,10 @@ defmodule LoggerFileBackendWithFormatters do
          msg,
          ts,
          md,
-         %{path: path, io_device: io_device, inode: inode, rotate: rotate} = state
+         %State{path: path, io_device: io_device, inode: inode} = state
        )
        when is_binary(path) do
-    if !is_nil(inode) and inode == get_inode(path) and rotate(path, rotate) do
+    if !is_nil(inode) and inode == get_inode(path) and rotate(path, state.rotate) do
       output = format_event(level, msg, ts, md, state)
 
       try do
@@ -82,15 +83,15 @@ defmodule LoggerFileBackendWithFormatters do
           case open_log(path) do
             {:ok, io_device, inode} ->
               IO.write(io_device, prune(output))
-              {:ok, %{state | io_device: io_device, inode: inode}}
+              {:ok, %State{state | io_device: io_device, inode: inode}}
 
             _other ->
-              {:ok, %{state | io_device: nil, inode: nil}}
+              {:ok, %State{state | io_device: nil, inode: nil}}
           end
       end
     else
       File.close(io_device)
-      log_event(level, msg, ts, md, %{state | io_device: nil, inode: nil})
+      log_event(level, msg, ts, md, %State{state | io_device: nil, inode: nil})
     end
   end
 
@@ -170,23 +171,7 @@ defmodule LoggerFileBackendWithFormatters do
     end
   end
 
-  defp configure(name, opts) do
-    state = %{
-      name: nil,
-      path: nil,
-      io_device: nil,
-      inode: nil,
-      format: nil,
-      level: nil,
-      metadata: nil,
-      metadata_filter: nil,
-      rotate: nil
-    }
-
-    configure(name, opts, state)
-  end
-
-  defp configure(name, opts, state) do
+  defp configure(name, opts, state \\ %State{}) do
     env = Application.get_env(:logger, name, [])
     opts = Keyword.merge(env, opts)
     Application.put_env(:logger, name, opts)
@@ -199,7 +184,7 @@ defmodule LoggerFileBackendWithFormatters do
     metadata_filter = Keyword.get(opts, :metadata_filter)
     rotate = Keyword.get(opts, :rotate)
 
-    %{
+    %State{
       state
       | name: name,
         path: path,
