@@ -4,7 +4,7 @@ defmodule LoggerFileBackendWithFormatters.Mixfile do
   def project do
     [
       app: :logger_file_backend_with_formatters,
-      version: "0.0.10",
+      version: "0.0.1",
       elixir: "~> 1.0",
       description: description(),
       package: package(),
