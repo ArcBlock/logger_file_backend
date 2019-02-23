@@ -1,0 +1,28 @@
+language: elixir
+dist: xenial
+elixir: 1.8.1
+otp_release: 21.2.4
+branches:
+  only:
+  - master
+install:
+- mix local.hex --force
+- mix local.rebar --force
+before_script: make travis-init
+script: make travis
+deploy:
+  - provider: script
+    skip_cleanup: true
+    script: make travis-deploy
+    on:
+      branch: master
+  - provider: releases
+    skip_cleanup: true
+    api_key:
+      secure: AWWqAc2MxFHTB1BZb6MI2TOg5I280iJVyb+qk2xAVyBXUWwHi1pMUOA3fV4sdofFG66g/Prjfc7WVmjRecYMvyHUBnsPcBd6rbxcTDqEsSpnkux66AllFN9WJaMKnKTJTuecaVS2yAwhg0ftdca4pHzrYlwuBwDtHUQ+m6p6Be36whnpzFuj6jrA4r58PH6prp91cSBZLPsnCySAw/vZ3o29wyZHjz6EbNOLWckKi3ssEfFJpg4Ej422Mwf75bwDq5KWTaxAHufOwbSeHY0N9tNJmv9DkIFfRZqYSGAaWER0Fufroh7x/K/cQpJ/A/ZBoxgYH7ZxtnXLEh/ZxIvfmSLY6q7FBI3gr0do4x1M4iRiIMIK8KJ1eWo1idUz6l/uOPXKi6O7Qpnj72iVeh4QVS0NwnEoelSt7M3qjKTUxvJmG/YewHdI4i3mnRv6JQH67Bm9DQ2rH494CmNEb0Ei7ekaNHIowWgokzFIq5mBIZWYzNmXe5mLhDtSzTEEDJJCBpraGSH6Gv2PF6QWC5LVXQ83uOI9/t+hLPmsaMfZSUZv/NqCT6K8ITbCl8vGMG1BdDNEh4Ju/O2hqQW8qZyaHw8bzb+O2vxovSfQTVBGe2hI/MZ25+O9mourRtiRryWy0YU5TXkvJh/YpQhT599PBn83gZcZt+6c42B6uZojlTc=
+    on:
+      repo: ArcBlock/forge-pipe
+      branch: master
+env:
+  matrix:
+  - MIX_ENV=test

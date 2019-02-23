@@ -1,4 +1,4 @@
-defmodule LoggerFileBackendWithFormatters.Formatter do
+defmodule LoggerFileBackend.Formatter do
   @moduledoc """
   Behaviour that should be implemented by log formatters.
   """

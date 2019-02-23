@@ -1,4 +1,4 @@
-defmodule LoggerFileBackendWithFormatters do
+defmodule LoggerFileBackend do
   @moduledoc """
   """
 
@@ -180,7 +180,7 @@ defmodule LoggerFileBackendWithFormatters do
     metadata = Keyword.get(opts, :metadata, [])
     format_opts = Keyword.get(opts, :format, @default_format)
     format = Logger.Formatter.compile(format_opts)
-    formatter = Keyword.get(opts, :formatter, LoggerFileBackendWithFormatters.Formatters.Default)
+    formatter = Keyword.get(opts, :formatter, LoggerFileBackend.Formatters.Default)
     path = Keyword.get(opts, :path)
     metadata_filter = Keyword.get(opts, :metadata_filter)
     rotate = Keyword.get(opts, :rotate)

@@ -1,4 +1,4 @@
-LoggerFileBackendWithFormatters
+LoggerFileBackend
 =================
 
 A simple `Logger` backend which writes logs to a file. It does not handle log
@@ -9,38 +9,38 @@ used in conjunction with external log rotation.
 
 ## Configuration
 
-`LoggerFileBackendWithFormatters` is a custom backend for the elixir `:logger` application. As
+`LoggerFileBackend` is a custom backend for the elixir `:logger` application. As
 such, it relies on the `:logger` application to start the relevant processes.
 However, unlike the default `:console` backend, we may want to configure
 multiple log files, each with different log levels formats, etc. Also, we want
 `:logger` to be responsible for starting and stopping each of our logging
 processes for us. Because of these considerations, there must be one `:logger`
 backend configured for each log file we need. Each backend has a name like
-`{LoggerFileBackendWithFormatters, id}`, where `id` is any elixir term (usually an atom).
+`{LoggerFileBackend, id}`, where `id` is any elixir term (usually an atom).
 
 For example, let's say we want to log error messages to
 "/var/log/my_app/error.log". To do that, we will need to configure a backend.
-Let's call it `{LoggerFileBackendWithFormatters, :error_log}`.
+Let's call it `{LoggerFileBackend, :error_log}`.
 
 Our config.exs would have an entry similar to this:
 
 ```elixir
-# tell logger to load a LoggerFileBackendWithFormatters processes
+# tell logger to load a LoggerFileBackend processes
 config :logger,
-  backends: [{LoggerFileBackendWithFormatters, :error_log}]
+  backends: [{LoggerFileBackend, :error_log}]
 ```
 
-With this configuration, the `:logger` application will start one `LoggerFileBackendWithFormatters`
-named `{LoggerFileBackendWithFormatters, :error_log}`. We still need to set the correct file
+With this configuration, the `:logger` application will start one `LoggerFileBackend`
+named `{LoggerFileBackend, :error_log}`. We still need to set the correct file
 path and log levels for the backend, though. To do that, we add another config
 stanza. Together with the stanza above, we'll have something like this:
 
 ```elixir
-# tell logger to load a LoggerFileBackendWithFormatters processes
+# tell logger to load a LoggerFileBackend processes
 config :logger,
-  backends: [{LoggerFileBackendWithFormatters, :error_log}]
+  backends: [{LoggerFileBackend, :error_log}]
 
-# configuration for the {LoggerFileBackendWithFormatters, :error_log} backend
+# configuration for the {LoggerFileBackend, :error_log} backend
 config :logger, :error_log,
   path: "/var/log/my_app/error.log",
   level: :error
@@ -49,7 +49,7 @@ config :logger, :error_log,
 Check out the examples below for runtime configuration and configuration for
 multiple log files.
 
-`LoggerFileBackendWithFormatters` supports the following configuration values:
+`LoggerFileBackend` supports the following configuration values:
 
 * path - the path to the log file
 * level - the logging level for the backend
@@ -63,8 +63,8 @@ multiple log files.
 #### Runtime configuration
 
 ```elixir
-Logger.add_backend {LoggerFileBackendWithFormatters, :debug}
-Logger.configure_backend {LoggerFileBackendWithFormatters, :debug},
+Logger.add_backend {LoggerFileBackend, :debug}
+Logger.configure_backend {LoggerFileBackend, :debug},
   path: "/path/to/debug.log",
   format: ...,
   metadata: ...,
@@ -75,8 +75,8 @@ Logger.configure_backend {LoggerFileBackendWithFormatters, :debug},
 
 ```elixir
 config :logger,
-  backends: [{LoggerFileBackendWithFormatters, :info},
-             {LoggerFileBackendWithFormatters, :error}]
+  backends: [{LoggerFileBackend, :info},
+             {LoggerFileBackend, :error}]
 
 config :logger, :info,
   path: "/path/to/info.log",
@@ -92,7 +92,7 @@ This example only logs `:info` statements originating from the `:ui` OTP app; th
 
 ```elixir
 config :logger,
-  backends: [{LoggerFileBackendWithFormatters, :ui}]
+  backends: [{LoggerFileBackend, :ui}]
 
 config :logger, :ui,
   path: "/path/to/ui.log",
@@ -105,7 +105,7 @@ This example only writes log statements with a custom metadata key to the file.
 ```elixir
 # in a config file:
 config :logger,
-  backends: [{LoggerFileBackendWithFormatters, :device_1}]
+  backends: [{LoggerFileBackend, :device_1}]
 
 config :logger, :device_1
   path: "/path/to/device_1.log",
