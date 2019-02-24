@@ -3,7 +3,7 @@ defmodule LoggerFileBackend do
   """
 
   defmodule State do
-    defstruct ~w(format formatter inode io_device level metadata metadata_filter name path rotate)a
+    defstruct ~w(format formatter inode io_device level metadata metadata_filter name path rotate default_meta)a
   end
 
   @behaviour :gen_event
@@ -30,8 +30,10 @@ defmodule LoggerFileBackend do
   end
 
   def handle_event({level, _gl, {Logger, msg, ts, md}}, state) do
+    context = Keyword.merge(state.default_meta, md)
+
     if (is_nil(state.level) or Logger.compare_levels(level, state.level) != :lt) and
-         metadata_matches?(md, state.metadata_filter) do
+         metadata_matches?(context, state.metadata_filter) do
       log_event(level, msg, ts, md, state)
     else
       {:ok, state}
@@ -134,20 +136,14 @@ defmodule LoggerFileBackend do
   end
 
   @doc false
-  @spec metadata_matches?(Keyword.t(), nil | Keyword.t()) :: true | false
+  @spec metadata_matches?(Keyword.t(), term() | nil) :: true | false
   def metadata_matches?(_md, nil), do: true
-  # all of the filter keys are present
-  def metadata_matches?(_md, []), do: true
 
-  def metadata_matches?(md, [{key, val} | rest]) do
-    case Keyword.fetch(md, key) do
-      {:ok, ^val} ->
-        metadata_matches?(md, rest)
-
-      # fail on first mismatch
-      _ ->
-        false
-    end
+  def metadata_matches?(md, quoted) do
+    {ret, _} = Code.eval_quoted(quoted, md)
+    ret
+  rescue
+    _ -> false
   end
 
   def take_metadata(metadata, :all), do: metadata
@@ -182,8 +178,14 @@ defmodule LoggerFileBackend do
     format = Logger.Formatter.compile(format_opts)
     formatter = Keyword.get(opts, :formatter, LoggerFileBackend.Formatters.Default)
     path = Keyword.get(opts, :path)
-    metadata_filter = Keyword.get(opts, :metadata_filter)
+
+    metadata_filter =
+      opts
+      |> Keyword.get(:metadata_filter, "true")
+      |> Code.string_to_quoted!()
+
     rotate = Keyword.get(opts, :rotate)
+    default_meta = Keyword.get(opts, :default_meta, [])
 
     %State{
       state
@@ -193,8 +195,9 @@ defmodule LoggerFileBackend do
         formatter: formatter,
         level: level,
         metadata: metadata,
-        metadata_filter: metadata_filter,
-        rotate: rotate
+        metadata_filter: metadata_filter || true,
+        rotate: rotate,
+        default_meta: default_meta
     }
   end
 

@@ -34,7 +34,7 @@ defmodule LoggerFileBackendTest do
   end
 
   test "can configure metadata_filter" do
-    config(metadata_filter: [md_key: true])
+    config(metadata_filter: "md_key == true")
     Logger.debug("shouldn't", md_key: false)
     Logger.debug("should", md_key: true)
     refute log() =~ "shouldn't"
@@ -44,17 +44,19 @@ defmodule LoggerFileBackendTest do
 
   test "metadata_matches?" do
     # exact match
-    assert metadata_matches?([a: 1], a: 1) == true
+    assert metadata_matches?([a: 1], Code.string_to_quoted!("a == 1")) == true
     # total mismatch
-    assert metadata_matches?([b: 1], a: 1) == false
+    assert metadata_matches?([b: 1, a: 3], Code.string_to_quoted!("a == 1")) == false
     # default to allow
     assert metadata_matches?([b: 1], nil) == true
     # metadata is superset of filter
-    assert metadata_matches?([b: 1, a: 1], a: 1) == true
+    assert metadata_matches?([b: 1, a: 1], Code.string_to_quoted!("a == 1")) == true
     # multiple filter keys subset of metadata
-    assert metadata_matches?([c: 1, b: 1, a: 1], b: 1, a: 1) == true
+    assert metadata_matches?([c: 1, b: 1, a: 1], Code.string_to_quoted!("a == 1 and b == 1")) ==
+             true
+
     # multiple filter keys superset of metadata
-    assert metadata_matches?([a: 1], b: 1, a: 1) == false
+    assert metadata_matches?([a: 1, b: 3], Code.string_to_quoted!("b == 1 and a == 1")) == false
   end
 
   test "creates log file" do
